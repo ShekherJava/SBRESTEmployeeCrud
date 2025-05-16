@@ -16,28 +16,39 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ashokit.entity.Employee;
+import com.ashokit.exception.EmployeeAlreadyExistException;
+import com.ashokit.exception.EmployeeNotFoundException;
 import com.ashokit.service.EmployeeService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name="Employees", description = "Employee REST API")
 @RestController
 public class EmployeeRestController {
 	
 	@Autowired
 	EmployeeService service;
 	
+	@Operation(summary = "Get employee by id", description = "Fetches employee by empno")
+	@ApiResponse(responseCode = "200", description = "Employee retrieved from DB successfully")
+	@ApiResponse(responseCode = "404", description = "Employee Not Found")
 	@GetMapping(value = "/employee/{id}", 
-			    produces = { "application/xml", "application/json" }
+			    produces = { "application/json" }
 			   )
-	public ResponseEntity<Employee> getEmployeeById(@PathVariable Integer id)
+	public ResponseEntity<Employee> getEmployeeById(@Parameter(description = "empno to fetch the details") @PathVariable Integer id)
 	{
 		// call service.fetchEmployeeById(id)
 		Employee emp = service.fetchEmployeeById(id);
 		if ( emp != null)
 			return  new ResponseEntity<Employee>(emp, HttpStatus.OK);
 		else
-			return  new ResponseEntity<Employee>(emp, HttpStatus.BAD_REQUEST);
+			throw new EmployeeNotFoundException("Employee with id : "+ id +" doesn't exist!");
 	}
 	
-	@GetMapping(value = "/employees", produces = "application/xml")
+	@GetMapping(value = "/employees", produces = "application/json")
 	public ResponseEntity<List<Employee>>  getEmployees() {
 		
 		// call service.fetchEmployees()
@@ -48,16 +59,20 @@ public class EmployeeRestController {
 			return new ResponseEntity<List<Employee>>(employees, HttpStatus.OK);
 	}
 	
+	
+	@Operation(summary = "Add a new Employee", description = "Adds a new Employee to the DB, by accepting the employee in request body")
+	@ApiResponse(responseCode = "201", description = "Employee is added to the Database Successfully")
+	@ApiResponse(responseCode = "400", description = "Bad request")
 	@PostMapping(value = "/add", 
-			     consumes = { "application/xml", "application/json" },
-			     produces = "application/xml"
+			     consumes = { "application/json" },
+			     produces = { "application/json" }
 			    )
 	public ResponseEntity<Employee> addEmployee(@RequestBody Employee e) {
 		
 		Employee emp = service.saveEmployee(e);
 		if(emp == null)
 		{
-			return new ResponseEntity<Employee>(HttpStatus.CONFLICT);
+			throw new EmployeeAlreadyExistException("Employee with id : " +e.getEmpno() +" already exist!");
 		}
 		else
 		{
@@ -67,8 +82,8 @@ public class EmployeeRestController {
 	}
 	
 	@PutMapping( value = "/update",
-			     consumes = "application/xml",
-			     produces = "application/xml"
+			     consumes = "application/json",
+			     produces = "application/json"
 			   )
 	public ResponseEntity<Employee> updateEmployee(@RequestBody Employee e)
 	{
@@ -91,8 +106,8 @@ public class EmployeeRestController {
 	}
 	
 	@PatchMapping(value = "/update/{id}",
-			      consumes = "application/xml",
-			      produces = "application/xml"
+			      consumes = "application/json",
+			      produces = "application/json"
 			     )
 	public ResponseEntity<Employee> partialUpdate(@RequestBody Map<String, Object> fieldsMap, @PathVariable Integer id) {
 		
@@ -104,6 +119,7 @@ public class EmployeeRestController {
 			return new ResponseEntity<Employee>(updatedEmployee, HttpStatus.OK);
 		
 	}
+	
 	
 }
 
